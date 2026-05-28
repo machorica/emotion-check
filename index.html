@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>우리반 감정 기록</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      transition: background-color 0.5s ease;
+    }
+
+    .morning-theme {
+      background-color: #E0F2FE;
+    }
+
+    .afternoon-theme {
+      background-color: #FFEDD5;
+    }
+
+    .tag-btn.active {
+      background-color: #3B82F6;
+      color: white;
+      border-color: #3B82F6;
+    }
+
+    .afternoon-theme .tag-btn.active {
+      background-color: #F97316;
+      color: white;
+      border-color: #F97316;
+    }
+  </style>
+</head>
+
+<body class="morning-theme min-h-screen flex justify-center text-gray-800">
+  <div class="w-full max-w-[480px] bg-white/60 backdrop-blur-md shadow-lg min-h-screen flex flex-col relative">
+
+    <!-- 상단 탭 -->
+    <nav id="top-nav" class="hidden flex border-b border-gray-200 bg-white">
+      <button onclick="switchView('main')" id="tab-main" class="flex-1 py-4 text-center font-bold text-blue-600 border-b-2 border-blue-600">
+        나의 감정 기록하기
+      </button>
+      <button onclick="switchView('results')" id="tab-results" class="flex-1 py-4 text-center font-bold text-gray-400">
+        친구들 감정 살펴보기
+      </button>
+    </nav>
+
+    <!-- 로그인 화면 -->
+    <div id="view-login" class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+      <div class="text-6xl mb-6">👋</div>
+      <h1 class="text-2xl font-bold mb-2">자신의 이름을 입력하세요</h1>
+      <p class="text-sm text-gray-500 mb-8">성과 이름을 띄어쓰지 말고 붙여서 쓰세요.</p>
+      <input
+        type="text"
+        id="name-input"
+        placeholder="예: 홍길동"
+        class="w-full p-4 rounded-xl border border-gray-300 text-center text-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400"
+      >
+      <button onclick="login()" class="w-full bg-blue-500 text-white font-bold py-4 rounded-xl text-lg hover:bg-blue-600 transition">
+        입력하기
+      </button>
+    </div>
+
+    <!-- 감정 기록 화면 -->
+    <div id="view-main" class="hidden flex-1 flex flex-col p-6 overflow-y-auto pb-24">
+
+      <div class="bg-white rounded-2xl p-5 shadow-sm mb-6">
+        <h2 class="font-bold mb-4 text-lg">1. 나의 표정은?</h2>
+        <div class="flex justify-between" id="emoji-container">
+          <button onclick="selectEmoji(this, '😆')" class="text-4xl p-2 rounded-xl border border-transparent hover:bg-gray-50 transition emoji-btn">
+            😆<br><span class="text-xs text-gray-500 mt-1 block">신나요</span>
+          </button>
+          <button onclick="selectEmoji(this, '😊')" class="text-4xl p-2 rounded-xl border border-transparent hover:bg-gray-50 transition emoji-btn">
+            😊<br><span class="text-xs text-gray-500 mt-1 block">좋아요</span>
+          </button>
+          <button onclick="selectEmoji(this, '😐')" class="text-4xl p-2 rounded-xl border border-transparent hover:bg-gray-50 transition emoji-btn">
+            😐<br><span class="text-xs text-gray-500 mt-1 block">보통이에요</span>
+          </button>
+          <button onclick="selectEmoji(this, '😩')" class="text-4xl p-2 rounded-xl border border-transparent hover:bg-gray-50 transition emoji-btn">
+            😩<br><span class="text-xs text-gray-500 mt-1 block">힘들어요</span>
+          </button>
+          <button onclick="selectEmoji(this, '😭')" class="text-4xl p-2 rounded-xl border border-transparent hover:bg-gray-50 transition emoji-btn">
+            😭<br><span class="text-xs text-gray-500 mt-1 block">슬퍼요</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-5 shadow-sm mb-6">
+        <h2 class="font-bold mb-4 text-lg">2. 지금 느끼는 내 감정은? <span class="text-sm text-gray-500">(여러 개 선택 가능)</span></h2>
+
+        <h3 class="text-sm font-semibold text-blue-500 mb-2">✨ 긍정</h3>
+        <div class="flex flex-wrap gap-2 mb-4" id="tags-positive"></div>
+
+        <h3 class="text-sm font-semibold text-green-500 mb-2">🍃 고요한</h3>
+        <div class="flex flex-wrap gap-2 mb-4" id="tags-calm"></div>
+
+        <h3 class="text-sm font-semibold text-red-500 mb-2">🌧️ 부정</h3>
+        <div class="flex flex-wrap gap-2" id="tags-negative"></div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-5 shadow-sm mb-6">
+        <h2 class="font-bold mb-4 text-lg">3. 나의 에너지 레벨은 몇 점?</h2>
+        <div class="flex justify-between text-xs text-gray-400 mb-2 px-1">
+          <span>안 좋음 (1)</span>
+          <span>아주 좋음 (10)</span>
+        </div>
+        <input
+          type="range"
+          id="energy-slider"
+          min="1"
+          max="10"
+          value="5"
+          class="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-4"
+          oninput="updateEnergy()"
+        >
+        <div class="text-center font-bold text-xl text-blue-600" id="energy-text">
+          5점 - 보통이에요 😐
+        </div>
+      </div>
+
+      <button id="submit-btn" onclick="submitRecord()" class="w-full bg-gray-800 text-white font-bold py-4 rounded-xl text-lg hover:bg-gray-900 transition mt-auto">
+        기록 완료
+      </button>
+    </div>
+
+    <!-- 결과 화면 -->
+    <div id="view-results" class="hidden flex-1 p-5 overflow-y-auto bg-gray-50">
+      <div id="results-container" class="grid grid-cols-2 gap-3"></div>
+    </div>
+
+  </div>
+
+  <script>
+    // Apps Script 웹 앱 URL
+    const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzwUn3Bbby7avI--kiiEctUONQS24vmA0PC0iD-qnr1gTKG5oI-lSxSukz9VntHb0ERQA/exec";
+
+    let currentUser = "";
+    let currentEmoji = "";
+    let currentTags = [];
+    let currentEnergy = 5;
+
+    const tagData = {
+      positive: ['기뻐요', '신나요', '설레요', '뿌듯해요', '감사해요', '행복해요', '재미있어요', '에너지 넘쳐요'],
+      calm: ['잔잔해요', '차분해요', '멍해요', '생각이 많아요', '집중돼요', '무덤덤해요', '쉬고싶어요', '혼자이고 싶어요'],
+      negative: ['슬퍼요', '화가나요', '피곤해요', '걱정돼요', '무서워요', '짜증나요', '속상해요', '지루해요']
+    };
+
+    const energyTexts = {
+      1: "지쳐요 😵",
+      2: "많이 힘들어요 😫",
+      3: "조금 힘들어요 😮‍💨",
+      4: "좀 피곤해요 🥱",
+      5: "보통이에요 😐",
+      6: "괜찮아요 🙂",
+      7: "좋아요 😊",
+      8: "많이 좋아요 😄",
+      9: "활기차요 🤩",
+      10: "넘쳐요 🚀"
+    };
+
+    window.onload = function () {
+      setThemeByTime();
+      renderTags();
+      updateEnergy();
+    };
+
+    function setThemeByTime() {
+      const hour = new Date().getHours();
+      const body = document.body;
+
+      if (hour < 12) {
+        body.classList.add('morning-theme');
+        body.classList.remove('afternoon-theme');
+      } else {
+        body.classList.add('afternoon-theme');
+        body.classList.remove('morning-theme');
+      }
+    }
+
+    function login() {
+      const nameInput = document.getElementById('name-input').value.trim();
+
+      if (!nameInput) {
+        alert('이름을 입력해주세요!');
+        return;
+      }
+
+      currentUser = nameInput;
+
+      document.getElementById('view-login').classList.add('hidden');
+      document.getElementById('top-nav').classList.remove('hidden');
+
+      switchView('main');
+    }
+
+    function switchView(view) {
+      document.getElementById('view-main').classList.add('hidden');
+      document.getElementById('view-results').classList.add('hidden');
+
+      const tabMain = document.getElementById('tab-main');
+      const tabResults = document.getElementById('tab-results');
+
+      tabMain.className = "flex-1 py-4 text-center font-bold text-gray-400";
+      tabResults.className = "flex-1 py-4 text-center font-bold text-gray-400";
+
+      const activeColor = document.body.classList.contains('afternoon-theme')
+        ? 'text-orange-500 border-orange-500'
+        : 'text-blue-600 border-blue-600';
+
+      if (view === 'main') {
+        document.getElementById('view-main').classList.remove('hidden');
+        tabMain.className = `flex-1 py-4 text-center font-bold border-b-2 ${activeColor}`;
+      } else {
+        document.getElementById('view-results').classList.remove('hidden');
+        tabResults.className = `flex-1 py-4 text-center font-bold border-b-2 ${activeColor}`;
+        fetchRecords();
+      }
+    }
+
+    function selectEmoji(btn, emoji) {
+      document.querySelectorAll('.emoji-btn').forEach(function (b) {
+        b.classList.remove('bg-blue-100', 'bg-orange-100', 'border-blue-400', 'border-orange-400');
+      });
+
+      const activeBg = document.body.classList.contains('afternoon-theme')
+        ? 'bg-orange-100'
+        : 'bg-blue-100';
+
+      const activeBorder = document.body.classList.contains('afternoon-theme')
+        ? 'border-orange-400'
+        : 'border-blue-400';
+
+      btn.classList.add(activeBg, activeBorder);
+      currentEmoji = emoji;
+    }
+
+    function renderTags() {
+      const createTagHTML = function (tags) {
+        return tags.map(function (tag) {
+          return `<button onclick="toggleTag(this, '${tag}')" class="tag-btn px-3 py-2 rounded-full border border-gray-200 text-sm text-gray-600 transition">${tag}</button>`;
+        }).join('');
+      };
+
+      document.getElementById('tags-positive').innerHTML = createTagHTML(tagData.positive);
+      document.getElementById('tags-calm').innerHTML = createTagHTML(tagData.calm);
+      document.getElementById('tags-negative').innerHTML = createTagHTML(tagData.negative);
+    }
+
+    function toggleTag(btn, tag) {
+      btn.classList.toggle('active');
+
+      if (currentTags.includes(tag)) {
+        currentTags = currentTags.filter(function (t) {
+          return t !== tag;
+        });
+      } else {
+        currentTags.push(tag);
+      }
+    }
+
+    function updateEnergy() {
+      currentEnergy = document.getElementById('energy-slider').value;
+
+      const energyColor = document.body.classList.contains('afternoon-theme')
+        ? 'text-orange-500'
+        : 'text-blue-600';
+
+      document.getElementById('energy-text').innerHTML =
+        `<span class="${energyColor}">${currentEnergy}점 - ${energyTexts[currentEnergy]}</span>`;
+    }
+
+    function submitRecord() {
+      if (!currentEmoji) {
+        alert('표정을 하나 선택해주세요!');
+        return;
+      }
+
+      if (currentTags.length === 0) {
+        alert('기분 태그를 하나 이상 선택해주세요!');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submit-btn');
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = '기록 중... ⏳';
+      submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+      const record = {
+        name: currentUser,
+        emoji: currentEmoji,
+        tags: currentTags,
+        energy: currentEnergy
+      };
+
+      fetch(APP_SCRIPT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(record)
+      })
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function (data) {
+        if (data.result === 'success') {
+          alert(`${currentUser} 기록 완료! 오늘 감정을 잘 기록했어요.\n친구들 탭에서 우리 반 친구들 기분도 확인해봐요!`);
+          resetForm();
+          switchView('results');
+        } else {
+          alert('저장에 실패했습니다. 관리자에게 문의하세요.');
+        }
+      })
+      .catch(function (error) {
+        console.error('Error:', error);
+        alert('네트워크 오류가 발생했습니다.');
+      })
+      .finally(function () {
+        submitBtn.disabled = false;
+        submitBtn.innerText = '기록 완료';
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      });
+    }
+
+    function resetForm() {
+      currentEmoji = "";
+      currentTags = [];
+      currentEnergy = 5;
+
+      document.querySelectorAll('.emoji-btn').forEach(function (btn) {
+        btn.classList.remove('bg-blue-100', 'bg-orange-100', 'border-blue-400', 'border-orange-400');
+      });
+
+      document.querySelectorAll('.tag-btn').forEach(function (btn) {
+        btn.classList.remove('active');
+      });
+
+      document.getElementById('energy-slider').value = 5;
+      updateEnergy();
+    }
+
+    function fetchRecords() {
+      const container = document.getElementById('results-container');
+
+      container.innerHTML =
+        '<div class="col-span-2 text-center text-gray-500 py-10">친구들의 기록을 불러오는 중입니다...</div>';
+
+      fetch(APP_SCRIPT_URL + '?action=getData')
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function (data) {
+        container.innerHTML = '';
+
+        if (!data || data.length === 0) {
+          container.innerHTML =
+            '<div class="col-span-2 text-center text-gray-500 py-20"><p>아직 감정을 기록한 친구들이 없어요.</p></div>';
+          return;
+        }
+
+        const reversedData = data.reverse();
+
+        const themeColor = document.body.classList.contains('afternoon-theme')
+          ? 'bg-orange-500'
+          : 'bg-blue-500';
+
+        reversedData.forEach(function (record) {
+          const card = document.createElement('div');
+
+          const tags = Array.isArray(record.tags) ? record.tags : [];
+          const energy = Number(record.energy) || 0;
+
+          card.className =
+            "bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-2 h-full justify-between";
+
+          card.innerHTML = `
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="font-bold text-sm text-gray-800 truncate pr-1">${record.name || ''}</span>
+                <span class="text-2xl">${record.emoji || ''}</span>
+              </div>
+              <div class="flex gap-1 flex-wrap">
+                ${tags.map(function (tag) {
+                  return `<span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded-md">${tag}</span>`;
+                }).join('')}
+              </div>
+            </div>
+
+            <div class="mt-2 pt-2 border-t border-gray-50">
+              <div class="flex justify-between text-[10px] text-gray-500 mb-1.5">
+                <span>에너지</span>
+                <span>${energy} / 10</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-1.5">
+                <div class="${themeColor} h-1.5 rounded-full" style="width: ${energy * 10}%"></div>
+              </div>
+            </div>
+          `;
+
+          container.appendChild(card);
+        });
+      })
+      .catch(function (error) {
+        console.error('Error:', error);
+        container.innerHTML =
+          '<div class="col-span-2 text-center text-red-500 py-10">데이터를 불러오는데 실패했습니다.</div>';
+      });
+    }
+  </script>
+</body>
+</html>

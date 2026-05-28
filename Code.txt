@@ -1,0 +1,63 @@
+const SHEET_NAME = '시트1'; // 시트 이름이 다르면 수정하세요.
+
+// 웹앱 화면 열기 + 데이터 조회 분기
+function doGet(e) {
+  // 데이터 조회 요청일 때만 JSON 데이터 반환
+  if (e && e.parameter && e.parameter.action === 'getData') {
+    return getData();
+  }
+
+  // 기본 접속은 index.html 화면 보여주기
+  return HtmlService.createHtmlOutputFromFile('index')
+    .setTitle('감정 체크')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// 데이터 저장용: 프론트엔드에서 POST 요청이 올 때 실행
+function doPost(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+
+  try {
+    const data = JSON.parse(e.postData.contents);
+
+    sheet.appendRow([
+      new Date(),                 // 기록시간
+      data.name,                  // 이름
+      data.emoji,                 // 표정
+      data.tags.join(', '),       // 기분태그
+      data.energy                 // 에너지 점수
+    ]);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ result: 'success' }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ result: 'error', error: error.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// 데이터 조회용 함수
+function getData() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+
+  const records = [];
+
+  // 1행 헤더 제외, 2행부터 읽기
+  for (let i = 1; i < data.length; i++) {
+    records.push({
+      timestamp: data[i][0],
+      name: data[i][1],
+      emoji: data[i][2],
+      tags: data[i][3] ? data[i][3].toString().split(', ') : [],
+      energy: data[i][4]
+    });
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify(records))
+    .setMimeType(ContentService.MimeType.JSON);
+}
